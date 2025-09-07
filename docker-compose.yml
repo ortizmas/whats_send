@@ -1,0 +1,49 @@
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - web
+  redis:
+    image: redis:6
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - web
+  api:
+    build: ./api
+    container_name: api
+    depends_on:
+      - rabbitmq
+      - redis
+    environment:
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - REDIS_HOST=redis
+    ports:
+      - "3000:3000"
+    networks:
+      - web
+  worker:
+    build: ./worker
+    depends_on:
+      - rabbitmq
+    environment:
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - REDIS_HOST=redis
+    deploy:
+      replicas: 2
+      mode: replicated
+      endpoint_mode: dnsrr      
+    networks: 
+      - web
+
+networks:
+  web:
